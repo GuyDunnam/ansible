@@ -1,0 +1,313 @@
+---
+# tasks file for smtpServer
+# - name: check for subscription
+#   shell: yum repolist all | grep "This system is not registered with an entitlement server. You can use subscription-manager to register."
+#   args:
+#     warn: false
+#   register: yum_check
+#   ignore_errors: yes
+#   tags: runthis2
+
+# - name: register
+#   become: true
+#   when: yum_check.stdout != ""
+#   shell: subscription-manager register --username '{{ mag_rh_login }}' --password '{{ mag_rh_password }}' --auto-attach
+#   #notify: 'unregister redhat'
+#   tags: runthis2
+
+- name: register server
+  become: true
+  redhat_subscription:
+    state: present
+    username: '{{ mag_rh_login }}'
+    password: '{{ mag_rh_password }}'
+    auto_attach: true  
+  tags: runthis2
+
+- name: add server optional repo
+  become: true
+  shell: 
+    cmd: subscription-manager repos --enable rhel-7-server-optional-rpms
+  tags: runthis2
+
+- name: copy epel.repo 
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/epel.repo
+    dest: /etc/yum.repos.d/epel.repo
+    owner: root
+    group: root
+    force: yes
+    mode: 0644
+  tags: runthis2
+
+- name: install epel-release key
+  shell:
+    cmd: rpm --import http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+    chdir: /  
+  tags: runthis2
+
+- name: install epel-release
+  shell:
+    cmd: yum -y install epel-release
+    chdir: /  
+  tags: runthis2
+ 
+- name: Yum update OS 
+  become: true
+  yum:
+    name: '*'
+    state: latest
+  tags: runthis2
+
+- name: change hostname to myserver
+  hostname:
+    name: "{{ hostname }}"
+
+- name: Add to /etchost file if the line does not exist
+  lineinfile:
+    path: /etc/hosts
+    line: 127.0.0.1 {{ hostname }}
+    create: yes
+  tags: runthis6 
+
+# - debug:
+#     msg: FQD = {{ testhost }}
+#   tags: runthis6  
+
+- name: Check/Install Postfix
+  become: true
+  yum:
+    name:
+      - postfix
+    state: present
+  tags: runthis3
+
+- name: open firewall ports 587, 465, 10024, 10025
+  shell: |
+    firewall-cmd --direct --add-rule ipv4 filter IN_public_allow 0 -m tcp -p tcp --dport 587 -j ACCEPT
+    firewall-cmd --direct --add-rule ipv4 filter IN_public_allow 0 -m tcp -p tcp --dport 465 -j ACCEPT
+    firewall-cmd --direct --add-rule ipv4 filter IN_public_allow 0 -m tcp -p tcp --dport 10024 -j ACCEPT
+    firewall-cmd --direct --add-rule ipv4 filter IN_public_allow 0 -m tcp -p tcp --dport 10025 -j ACCEPT
+    firewall-cmd --runtime-to-permanent
+  tags: runthis3
+
+- name: Chmod and move pem and key file
+  become: true
+  shell: |
+    cp /etc/postfix/master.cf /etc/postfix/master.cf.orig
+    cp /etc/postfix/main.cf /etc/postfix/main.cf.orig
+  tags: runthis4
+
+- name: Uncomment /etc/postfix/master.cf submission inet 
+  lineinfile:
+    path: /etc/postfix/master.cf
+    regexp: '^#submission'
+    line: 'submission inet n       -       n       -       -       smtpd '
+  tags: runthis3
+
+- name: Copy custom_header to /etc/postfix
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/custom_header
+    dest: /etc/postfix/custom_header
+    owner: root
+    group: root
+    force: yes
+    mode: 0644
+  tags: runthis3
+
+- name: Copy main_cf_settings.txt to /etc/postfix
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/main_cf_settings.txt
+    dest: /etc/postfix/main_cf_settings.txt
+    owner: root
+    group: root
+    force: yes
+    mode: 0644
+  tags: runthis3
+
+- name: Concatenate main_cf_settings.txt with main.cf
+  become: true
+  shell: 
+    cmd: cat main_cf_settings.txt >> main.cf 
+    chdir: /etc/postfix
+  tags: runthis3
+
+- name: "Create directory /etc/ssl/private"
+  become: true
+  file:
+    path: /etc/ssl/private
+    state: directory
+    mode: 0755
+    group: root
+    owner: root
+  tags: runthis3
+
+# - name: Create self-Signed certificate key file
+#   become: true
+#   shell: openssl genrsa -des3 -out /etc/ssl/private/server.key 2048 -passin pass:{{ domainname }}
+
+
+- name: Generate an OpenSSL private key (2048 bits)
+  openssl_privatekey:
+    path: /etc/ssl/{{ hostname }}.key
+    size: 2048
+  tags: runthis4
+
+- name: chmod on private key
+  become: true
+  shell: chmod 600 /etc/ssl/{{ hostname }}.key
+  tags: runthis4
+
+- name: "Create directory /etc/ssl/csr"
+  become: true
+  file:
+    path: /etc/ssl/csr
+    state: directory
+    mode: 0755
+    group: root
+    owner: root
+  tags: runthis4
+
+- name: Generate an OpenSSL Certificate Signing Request with Subject information
+  become: true
+  shell: openssl req -new -key /etc/ssl/{{ hostname }}.key -out /etc/ssl/{{ hostname }}.csr -passin pass:PassWd123!! \
+    -subj "/C=US/ST={{ state }}/L={{ city}}/O={{ company }}/OU={{ department }}/CN={{ hostname }}/emailAddress={{ email }}"
+  tags: runthis4
+
+- name: Generate an OpenSSL pem file
+  become: true
+  shell: |
+    openssl x509 -req -days 365 -in /etc/ssl/{{ hostname }}.csr -signkey /etc/ssl/{{ hostname }}.key -out /etc/ssl/{{ hostname }}.pem -passin pass:PassWd123!!
+    chmod 600 /etc/ssl/{{ hostname }}.key
+  tags: runthis4
+
+- name: Generate an OpenSSL key without a password
+  become: true
+  shell: |
+    openssl rsa -in /etc/ssl/{{ hostname }}.key -out /etc/ssl/{{ hostname }}.key.nopass -passin pass:PassWd123!!
+    chmod 600 /etc/ssl/{{ hostname }}.key.nopass
+  tags: runthis4
+
+- name: Over write key with no password key file
+  become: true
+  shell: mv /etc/ssl/{{ hostname }}.key.nopass /etc/ssl/{{ hostname }}.key -f
+  tags: runthis4
+
+- name: Generate an OpenSSL cacert
+  become: true
+  shell: |
+    openssl req -new -x509 -extensions v3_ca -keyout /etc/ssl/server.pem -out /etc/ssl/cacert.pem -days 3650 -passout pass:PassWd123!! \
+    -subj "/C=US/ST={{ state }}/L={{ city}}/O={{ company }}/OU={{ department }}/CN={{ hostname }}/emailAddress={{ email }}"
+    chmod 600 /etc/ssl/server.pem
+  tags: runthis4
+
+- name: Chmod and move pem and key file
+  become: true
+  shell: |
+    chmod 600 /etc/ssl/server.pem
+    chmod 600 /etc/ssl/{{ hostname }}.key
+    mv /etc/ssl/{{ hostname }}.key /etc/ssl/private/
+    mv /etc/ssl/{{ hostname }}.pem /etc/ssl/certs/
+    mv /etc/ssl/server.pem /etc/ssl/private/
+    mv /etc/ssl/cacert.pem /etc/ssl/certs/
+    mv /etc/ssl/{{ hostname }}.csr /etc/ssl/csr
+  tags: runthis4
+
+- name: main.cf set inet_protocols = all
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^#inet_protocols = all'
+    line: 'inet_protocols = all'
+  
+- name: main.cf set inet_interfaces = localhost
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: 'inet_interfaces = localhost'
+    line: 'inet_interfaces = 127.0.0.1, {{ ansible_facts.eth0.ipv4.address }}'
+  
+- name: main.cf set myhostname = host.domain.tld
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^#myhostname = host.domain.tld'
+    line: 'myhostname = {{ hostname }}'
+  
+- name: main.cf set mydomain = domain.tld
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^#mydomain = domain.tld'
+    line: 'mydomain = {{ domainname }}'
+  
+- name: main.cf set myorigin = $mydomain
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^#myorigin ='
+    line: 'myorigin = $myhostname'  
+
+- name: main.cf set mynetworks = local subnet, 127.0.0.0/8
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^#mynetworks = 168.100.189.0/28, 127.0.0.0/8'
+    line: 'mynetworks = {{ mynetwork }}, 127.0.0.0/8'  
+  
+
+- name: main.cf set mydestination
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^mydestination ='
+    line: 'mydestination = $myhostname, localhost.$mydomain, localhost, {{ domainname }}' 
+
+- name: main.cf uncomment smtpd_client_restrictions
+  become: true
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp: '^#smtpd_client_restrictions ='
+    line: 'smtpd_client_restrictions = permit_mynetworks, reject'  
+
+- name: Postconf smtpd_tls_key_file. # Key
+  shell:
+    cmd: postconf -e 'smtpd_tls_key_file = /etc/ssl/private/{{ hostname }}.key'
+    chdir: /etc/ssl/  
+ 
+- name: Postconf smtpd_tls_cert_file. # cert
+  shell:
+    cmd: postconf -e 'smtpd_tls_cert_file = /etc/ssl/certs/{{ hostname }}.pem'
+    chdir: /etc/ssl/  
+  tags: runthis4
+ 
+- name: Postconf smtpd_tls_cafile_file. # cafile
+  shell:
+    cmd: postconf -e 'smtpd_tls_CAfile = /etc/ssl/certs/{{ capem }}'
+    chdir: /etc/ssl/ 
+  tags: runthis4
+
+- name: Postconf tls_random_source.
+  shell:
+    cmd: postconf -e 'tls_random_source = dev:/dev/urandom'
+    chdir: /etc/ssl/  
+  tags: runthis4
+
+- name: openssl generate DF param file.
+  shell:
+    cmd: openssl dhparam -out /etc/ssl/private/postfix.dh.param 2048
+    chdir: /etc/ssl/  
+  tags: runthis4
+
+#- include: aws_creds.yml
+- include: clamav.yml
+- include: altermime.yml
+
+- name: restart postfix
+  service:
+    name: postfix
+    state: restarted
+  tags: runthis4

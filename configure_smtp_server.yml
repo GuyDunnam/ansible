@@ -1,0 +1,9 @@
+---
+  - hosts: smtpservers
+    become: true
+    roles:
+      - smtpserver
+
+    vars_files:
+      - /home/guy/ansible/vars/login-varibles.yml
+

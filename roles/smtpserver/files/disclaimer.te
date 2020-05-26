@@ -1,0 +1,17 @@
+
+module disclaimer 1.0;
+
+require {
+	type postfix_etc_t;
+	type postfix_pipe_t;
+	type var_spool_t;
+	class dir { add_name write };
+	class file { create execute execute_no_trans write };
+}
+
+#============= postfix_pipe_t ==============
+allow postfix_pipe_t postfix_etc_t:file { execute execute_no_trans };
+
+#!!!! WARNING: 'var_spool_t' is a base type.
+allow postfix_pipe_t var_spool_t:dir { add_name write };
+allow postfix_pipe_t var_spool_t:file { create write };

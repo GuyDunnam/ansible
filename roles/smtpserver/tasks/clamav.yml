@@ -1,0 +1,81 @@
+
+- name: install clamav
+  become: true
+  shell:
+    cmd: yum -y install clamav-server clamav-data clamav-update clamav-filesystem clamav clamav-scanner-systemd clamav-devel clamav-lib clamav-server-systemd spamassassin sendmail-milter clamav-milter clamav-milter-systemd milter-greylist
+ 
+- name: configure selinux for av
+  become: true
+  shell: |
+    setenforce 0
+    setsebool -P antivirus_can_scan_system 1
+    setsebool -P clamd_use_jit 1
+
+- name: copy scan.conf 
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/scan.conf
+    dest: /etc/clamd.d/scan.conf
+    owner: root
+    group: root
+    force: yes
+    mode: 0644    
+
+- name: copy freshclam.conf 
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/freshclam.conf
+    dest: /etc/freshclam.conf
+    owner: root
+    group: root
+    force: yes
+    mode: 0600
+
+- name: copy clamav.conf 
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/clamav.conf
+    dest: /etc/tmpfiles.d/clamav.conf
+    owner: root
+    group: root
+    force: yes
+    mode: 0755
+
+- name: create /var/run/clamav folder
+  become: true
+  file:
+    path: /var/run/clamav
+    state: directory
+    owner: clamscan 
+
+- name: update av dat file
+  shell: 
+    cmd: freshclam
+    chdir: /   
+
+
+- name: start freshclam
+  service:
+    name: clamav-freshclam
+    state: started
+
+
+- name: auto start freshclam
+  service:
+    name: clamav-freshclam
+    enabled: yes
+
+
+- name: start clamd@scan
+  service:
+    name: clamd@scan
+    state: started
+
+
+- name: auto start clamd@scan
+  service:
+    name: clamd@scan
+    enabled: yes
+
+
+

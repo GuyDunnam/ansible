@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Simple EC2 instance example
+Parameters:
+  InstanceTypeParam:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - m1.small
+      - m1.large
+    Description: EC2 Instance Type
+Resources:
+  ExampleInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageID: ami-f5e4d294
+      InstanceType:
+        Ref: InstanceTypeParam

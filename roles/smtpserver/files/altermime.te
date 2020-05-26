@@ -1,0 +1,15 @@
+
+module altermime 1.0;
+
+require {
+	type postfix_pipe_t;
+	type var_spool_t;
+	class dir remove_name;
+	class file { rename unlink };
+}
+
+#============= postfix_pipe_t ==============
+
+#!!!! WARNING: 'var_spool_t' is a base type.
+allow postfix_pipe_t var_spool_t:dir remove_name;
+allow postfix_pipe_t var_spool_t:file { rename unlink };

@@ -1,0 +1,51 @@
+#Altermime config
+
+- name: copy disclaimer.pp
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/disclaimer.pp
+    dest: /tmp/disclaimer.pp
+    owner: root
+    group: root
+    force: yes
+    mode: 0755
+
+- name: copy disclaimer.te
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/disclaimer.te
+    dest: /tmp/disclaimer.te
+    owner: root
+    group: root
+    force: yes
+    mode: 0755
+
+- name: add disclaimer to selinux
+  shell: 
+    cmd: semodule -i /tmp/disclaimer.pp
+    chdir: /tmp
+
+- name: copy altermime.pp
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/altermime.pp
+    dest: /tmp/altermime.pp
+    owner: root
+    group: root
+    force: yes
+    mode: 0755
+
+- name: copy altermime.te
+  become: true
+  copy:
+    src: ~/ansible/roles/smtpserver/files/altermime.te
+    dest: /tmp/altermime.te
+    owner: root
+    group: root
+    force: yes
+    mode: 0755
+
+- name: add altermime to selinux
+  shell: 
+    cmd: semodule -i /tmp/altermime.pp
+    chdir: /tmp

@@ -1,0 +1,13 @@
+---
+# vars file for smtpServer
+
+servername: smtp
+domainname: tiscfl01.com
+hostname: "{{ servername}}.{{ domainname }}"
+mynetwork: 10.0.0.0/16
+capem: cacert.pem 
+email: email@afsoc.com
+city: Ft Walton Beach
+state: FL
+department: IT
+company: MAG Aerospace

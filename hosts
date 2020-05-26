@@ -1,0 +1,12 @@
+# hosts
+
+[smtpservers]
+smtp1 ansible_host=96.127.120.123
+
+
+[smtp_build_ec2_instance]
+
+[local]
+control ansible_connection=local
+
+ansible_python_interpreter=auto

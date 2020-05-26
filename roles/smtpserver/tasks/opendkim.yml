@@ -1,0 +1,13 @@
+#OpenDKIM config
+#https://www.linuxtechi.com/configure-domainkeys-with-postfix-on-centos-7/
+
+- name: install openDKIM
+  shell:
+    cmd: yum -y install opendkim
+    chdir: /  
+  tags: runthis5
+
+- name: create openDKIM keys
+  shell:
+    cmd: opendkim-default-keygen
+    
