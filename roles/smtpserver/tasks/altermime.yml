@@ -1,4 +1,4 @@
-#Altermime config
+#Altermime config setup
 
 - name: copy disclaimer.pp
   become: true
