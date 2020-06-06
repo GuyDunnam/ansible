@@ -1,0 +1,10 @@
+---
+  - hosts: test_client
+    become: true
+    roles:
+      - smtp_test_client
+
+    vars_files:
+      - /home/guy/ansible/group_vars/all/pass.yml
+      
+
