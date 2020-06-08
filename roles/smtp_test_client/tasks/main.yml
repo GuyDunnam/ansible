@@ -47,6 +47,13 @@
     state: latest
   tags: runthis2
 
+- name: install telnet
+  become: true
+  yum: 
+    name: telnet
+    state: latest
+  tags: runthis3
+
 - name: Yum update OS 
   become: true
   yum:
