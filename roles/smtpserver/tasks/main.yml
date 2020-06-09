@@ -1,19 +1,5 @@
 ---
 # tasks file for smtpServer
-# - name: check for subscription
-#   shell: yum repolist all | grep "This system is not registered with an entitlement server. You can use subscription-manager to register."
-#   args:
-#     warn: false
-#   register: yum_check
-#   ignore_errors: yes
-#   tags: runthis2
-
-# - name: register
-#   become: true
-#   when: yum_check.stdout != ""
-#   shell: subscription-manager register --username '{{ mag_rh_login }}' --password '{{ mag_rh_password }}' --auto-attach
-#   #notify: 'unregister redhat'
-#   tags: runthis2
 
 - name: register server
   become: true
@@ -38,7 +24,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0644
+    mode: '644'
   tags: runthis2
 
 - name: install epel-release key
@@ -78,8 +64,7 @@
 - name: Check/Install Postfix
   become: true
   yum:
-    name:
-      - postfix
+    name: postfix
     state: present
   tags: runthis3
 
@@ -114,7 +99,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0644
+    mode: '644'
   tags: runthis3
 
 - name: Copy main_cf_settings.txt to /etc/postfix
@@ -125,7 +110,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0644
+    mode: '644'
   tags: runthis3
 
 - name: Concatenate main_cf_settings.txt with main.cf
@@ -140,15 +125,10 @@
   file:
     path: /etc/ssl/private
     state: directory
-    mode: 0755
+    mode: '755'
     group: root
     owner: root
   tags: runthis3
-
-# - name: Create self-Signed certificate key file
-#   become: true
-#   shell: openssl genrsa -des3 -out /etc/ssl/private/server.key 2048 -passin pass:{{ domainname }}
-
 
 - name: Generate an OpenSSL private key (2048 bits)
   openssl_privatekey:
@@ -166,7 +146,7 @@
   file:
     path: /etc/ssl/csr
     state: directory
-    mode: 0755
+    mode: '755'
     group: root
     owner: root
   tags: runthis4
