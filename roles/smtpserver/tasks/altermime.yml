@@ -1,4 +1,4 @@
-#Altermime config setup
+#Altermime config
 
 - name: copy disclaimer.pp
   become: true
@@ -8,7 +8,8 @@
     owner: root
     group: root
     force: yes
-    mode: 0755
+    mode: '755'
+
 
 - name: copy disclaimer.te
   become: true
@@ -18,7 +19,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0755
+    mode: '755'
 
 - name: add disclaimer to selinux
   shell: 
@@ -33,7 +34,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0755
+    mode: '755'
 
 - name: copy altermime.te
   become: true
@@ -43,7 +44,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0755
+    mode: '755'
 
 - name: add altermime to selinux
   shell: 

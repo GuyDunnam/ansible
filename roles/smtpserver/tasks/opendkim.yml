@@ -2,12 +2,68 @@
 #https://www.linuxtechi.com/configure-domainkeys-with-postfix-on-centos-7/
 
 - name: install openDKIM
-  shell:
-    cmd: yum -y install opendkim
-    chdir: /  
-  tags: runthis5
+  yum:
+    name: opendkim
+    state: latest
 
 - name: create openDKIM keys
   shell:
     cmd: opendkim-default-keygen
-    
+
+- name: edit /etc/opendkim.conf
+  replace:
+    path: "{{ item.path }}"
+    regexp: "{{ item.regexp1 }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { path: '/etc/opendkim.conf', regexp1: '^Mode\W . v', replace: 'Mode    sv'}
+    - { path: '/etc/opendkim.conf', regexp1: 'localhost$', replace: '127.0.0.1'}
+    - { path: '/etc/opendkim.conf', regexp1: 'relaxed$', replace: 'simple'}
+    - { path: '/etc/opendkim.conf', regexp1: '^# Domain\sexample.com', replace: "Domain\t{{ domainname }}"}
+    - { path: '/etc/opendkim.conf', regexp1: '^KeyFile', replace: '#KeyFile'}
+    - { path: '/etc/opendkim.conf', regexp1: '^# KeyTable', replace: 'KeyTable'}
+    - { path: '/etc/opendkim.conf', regexp1: '^# SigningTable', replace: 'SigningTable'}
+    - { path: '/etc/opendkim.conf', regexp1: '^# ExternalIgnoreList', replace: 'ExternalIgnoreList'}
+    - { path: '/etc/opendkim.conf', regexp1: '^# InternalHosts', replace: 'InternalHosts'}
+
+- name: edit /etc/opendkim/KeyTable
+  replace:
+    path: /etc/opendkim/KeyTable
+    regexp: "{{ item.regexp1 }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { path: '/etc/opendkim/KeyTable', regexp1: '^#default.', replace: 'default.'}
+    - { path: '/etc/opendkim/KeyTable', regexp1: 'example.com', replace: '{{ domainname }}'}
+
+- name: edit /etc/opendkim/SigningTable
+  replace:
+    path: /etc/opendkim/SigningTable
+    regexp: "{{ item.regexp1 }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { path: '/etc/opendkim/SigningTable', regexp1: '^#example.com', replace: '*@*{{ domainname }}'}
+    - { path: '/etc/opendkim/SigningTable', regexp1: 'example.com', replace: '{{ domainname }}'}    
+
+- name: edit /etc/opendkim/TrustedHosts
+  blockinfile:
+    path: /etc/opendkim/TrustedHosts
+    block: |
+      {{ domainname }}
+      {{ hostname }}
+      {{ mynetwork }}
+
+
+- name: edit /etc/postfix/main.cf
+  blockinfile:
+    path: /etc/postfix/main.cf
+    block: |
+      smtpd_milters = inet:127.0.0.1:8891
+      non_smtpd_milters = $smtpd_milters
+      milter_default_action = accept    
+
+- name: Restart Postfix
+  become: true
+  shell: |
+    hash -r
+    systemctl start opendkim ; systemctl enable opendkim ; systemctl restart postfix 
+

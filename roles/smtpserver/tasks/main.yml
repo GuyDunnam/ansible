@@ -61,6 +61,7 @@
 #     msg: FQD = {{ testhost }}
 #   tags: runthis6  
 
+
 - name: Check/Install Postfix
   become: true
   yum:
@@ -285,6 +286,7 @@
 #- include: aws_creds.yml
 - include: clamav.yml
 - include: altermime.yml
+- include: opendkim.yml
 
 - name: restart postfix
   service:

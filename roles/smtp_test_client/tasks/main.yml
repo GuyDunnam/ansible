@@ -33,26 +33,29 @@
     chdir: /  
   tags: runthis2
 
-- name: install epel-release
-  become: true
-  yum: 
-    name: epel-release
-    state: latest
-  tags: runthis2
+# - name: install epel-release
+#   become: true
+#   yum: 
+#     name: epel-release
+#     state: latest
+#   tags: runthis2
 
 - name: install swaks
   become: true
   yum: 
-    name: swaks
+    name: 
+      epel-release
+      swaks
+      telnet
     state: latest
   tags: runthis2
 
-- name: install telnet
-  become: true
-  yum: 
-    name: telnet
-    state: latest
-  tags: runthis3
+# - name: install telnet
+#   become: true
+#   yum: 
+#     name: telnet
+#     state: latest
+#   tags: runthis3
 
 - name: Yum update OS 
   become: true

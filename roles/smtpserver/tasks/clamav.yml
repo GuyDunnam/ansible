@@ -1,3 +1,4 @@
+# ClamAV config 
 
 - name: install clamav
   become: true
@@ -19,7 +20,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0644    
+    mode: '644'
 
 - name: copy freshclam.conf 
   become: true
@@ -29,7 +30,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0600
+    mode: '600'
 
 - name: copy clamav.conf 
   become: true
@@ -39,7 +40,7 @@
     owner: root
     group: root
     force: yes
-    mode: 0755
+    mode: '755'
 
 - name: create /var/run/clamav folder
   become: true
