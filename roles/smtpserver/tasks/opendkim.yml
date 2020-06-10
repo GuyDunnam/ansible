@@ -26,6 +26,16 @@
     - { path: '/etc/opendkim.conf', regexp1: '^# ExternalIgnoreList', replace: 'ExternalIgnoreList'}
     - { path: '/etc/opendkim.conf', regexp1: '^# InternalHosts', replace: 'InternalHosts'}
 
+- name: test edit /etc/opendkim.conf
+  replace:
+    path: "{{ item.path }}"
+    regexp: "{{ item.regexp1 }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { path: '/etc/opendkim.conf', regexp1: '^Mode    v', replace: 'Mode    sv'}
+  tags: runthis7
+
+
 - name: edit /etc/opendkim/KeyTable
   replace:
     path: /etc/opendkim/KeyTable
